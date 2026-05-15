@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Signal Lab</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #050d1a;
+      color: #a8d4ff;
+      font-family: 'Press Start 2P', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+      image-rendering: pixelated;
+    }
+
+    /* ── PIXELATED SCANLINE OVERLAY ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(to bottom,
+          transparent 0px,
+          transparent 3px,
+          rgba(0, 0, 0, 0.12) 3px,
+          rgba(0, 0, 0, 0.12) 4px);
+      z-index: 100;
+    }
+
+    /* ── MC PANEL (deep-sea block) ── */
+    .mc-panel {
+      background: #071428;
+      border-top: 4px solid #1e4080;
+      border-left: 4px solid #1e4080;
+      border-right: 4px solid #040d1f;
+      border-bottom: 4px solid #040d1f;
+      width: 100%;
+      max-width: 1100px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    /* ── TITLE ── */
+    .mc-title {
+      text-align: center;
+      font-size: 13px;
+      color: #55aaff;
+      text-shadow: 2px 2px #002266, 0 0 16px #0044cc88;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+    }
+
+    /* ── CONTROLS ROW ── */
+    .controls {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    /* ── BUTTONS ── */
+    button {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      padding: 7px 12px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      outline: none;
+      /* Default: blue block */
+      background: #0a2a5e;
+      color: #55aaff;
+      border-top: 3px solid #2266cc;
+      border-left: 3px solid #2266cc;
+      border-right: 3px solid #040d1f;
+      border-bottom: 3px solid #040d1f;
+      text-shadow: 1px 1px #001133;
+    }
+
+    button:active {
+      border-top: 3px solid #040d1f;
+      border-left: 3px solid #040d1f;
+      border-right: 3px solid #2266cc;
+      border-bottom: 3px solid #2266cc;
+      transform: translate(1px, 1px);
+    }
+
+    button.active {
+      background: #0d1f44;
+      color: #ff5566;
+      border-top: 3px solid #040d1f;
+      border-left: 3px solid #040d1f;
+      border-right: 3px solid #aa2233;
+      border-bottom: 3px solid #aa2233;
+    }
+
+    button.tone-on {
+      background: #0a1e44;
+      color: #ffcc44;
+      border-top: 3px solid #040d1f;
+      border-left: 3px solid #040d1f;
+      border-right: 3px solid #886600;
+      border-bottom: 3px solid #886600;
+    }
+
+    /* ── SLIDERS ── */
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-label {
+      font-size: 6px;
+      color: #5588bb;
+      text-shadow: 1px 1px #001133;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .slider-val {
+      font-size: 6px;
+      color: #55aaff;
+      text-shadow: 0 0 8px #0055ff88;
+      min-width: 38px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100px;
+      height: 10px;
+      background: #040d1f;
+      border-top: 2px solid #040d1f;
+      border-left: 2px solid #040d1f;
+      border-right: 2px solid #1e4080;
+      border-bottom: 2px solid #1e4080;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 20px;
+      background: #1155cc;
+      border-top: 3px solid #4488ff;
+      border-left: 3px solid #4488ff;
+      border-right: 3px solid #040d1f;
+      border-bottom: 3px solid #040d1f;
+      cursor: pointer;
+    }
+
+    select {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 6px;
+      background: #040d1f;
+      color: #55aaff;
+      border-top: 2px solid #040d1f;
+      border-left: 2px solid #040d1f;
+      border-right: 2px solid #1e4080;
+      border-bottom: 2px solid #1e4080;
+      padding: 5px 6px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* ── CANVAS LABELS ── */
+    .canvas-label {
+      font-size: 6px;
+      color: #2255aa;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    /* ── CANVASES ── */
+    canvas {
+      display: block;
+      width: 100%;
+      border-top: 3px solid #040d1f;
+      border-left: 3px solid #040d1f;
+      border-right: 3px solid #1e4080;
+      border-bottom: 3px solid #1e4080;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      margin-bottom: 12px;
+    }
+
+    /* ── HUD ── */
+    .hud {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .hud-stat {
+      font-size: 5px;
+      color: #2255aa;
+      letter-spacing: 1px;
+    }
+
+    .hud-stat span {
+      color: #55aaff;
+      text-shadow: 0 0 6px #0033aaaa;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="mc-panel">
+    <div class="mc-title">[ SIGNAL LAB v2 ]</div>
+
+    <div class="controls">
+      <button id="startBtn" onclick="start()">▶ START</button>
+      <button id="holdBtn" onclick="toggleHold()">⏸ HOLD</button>
+      <button id="oscBtn" onclick="toggleOsc()">♪ TONE GEN</button>
+
+      <div class="slider-group">
+        <span class="slider-label">GAIN</span>
+        <input type="range" min="0.5" max="3" step="0.1" value="1" id="gain">
+        <span class="slider-val" id="gainVal">1.0x</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mc-panel">
+    <div class="canvas-label">■ WAVEFORM — TIME DOMAIN</div>
+    <canvas id="waveCanvas" width="1060" height="220"></canvas>
+
+    <div class="canvas-label">■ SPECTRUM — FREQUENCY DOMAIN</div>
+    <canvas id="fftCanvas" width="1060" height="200"></canvas>
+
+    <div class="hud" id="hud">
+      <span class="hud-stat">SAMPLE RATE: <span id="sr">--</span></span>
+      <span class="hud-stat">FFT SIZE: <span id="fftsize">--</span></span>
+      <span class="hud-stat">STATE: <span id="state">STANDBY</span></span>
+      <span class="hud-stat">PEAK: <span id="peakVal">-- dB</span></span>
+      <span class="hud-stat">DOM FREQ: <span id="domFreq">-- Hz</span></span>
+    </div>
+  </div>
+
+  <script>
+    let audioCtx, analyser, dataArray, fftArray;
+    let splitter, freeze = false, osc, oscOn = false;
+    let lastSend = 0;
+    let peakSmooth = 0;
+
+    // ── COLOR PALETTE (astro blue / deep space) ──
+    const BG = '#020810';
+    const GRID_DOT = '#0a1e3a';
+    const GRID_AXIS = '#0e2a50';
+    const GRID_CTR = '#143566';
+    const WAVE_HI = '#55aaff';
+    const WAVE_MID = '#2266cc';
+    const WAVE_GLO = '#0033aa44';
+
+    // FFT bar gradient stops
+    const FFT_LOW = '#0d3a7a';
+    const FFT_MID = '#1a66dd';
+    const FFT_HI = '#55aaff';
+    const FFT_PEAK = '#aaddff';
+
+    // ── PIXEL SIZE for blocky look ──
+    const PX = 2;
+
+    function start() {
+      if (audioCtx) return;
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        splitter = audioCtx.createGain();
+        splitter.gain.value = 1;
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.78;
+        source.connect(splitter);
+        splitter.connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        fftArray = new Uint8Array(analyser.frequencyBinCount);
+
+        document.getElementById('startBtn').textContent = '■ LIVE';
+        document.getElementById('startBtn').classList.add('active');
+        document.getElementById('sr').textContent = audioCtx.sampleRate;
+        document.getElementById('fftsize').textContent = analyser.fftSize;
+        document.getElementById('state').textContent = 'LIVE';
+
+        drawLoop();
+        hudLoop();
+      }).catch(() => alert('Mic access denied.'));
+    }
+
+    // ── DRAW LOOP ──
+    function drawLoop() {
+      requestAnimationFrame(drawLoop);
+      if (!analyser || freeze) return;
+      analyser.getByteTimeDomainData(dataArray);
+      analyser.getByteFrequencyData(fftArray);
+      drawWave();
+      drawFFT();
+    }
+
+    // ── WAVEFORM ──
+    function drawWave() {
+      const c = document.getElementById('waveCanvas');
+      const ctx = c.getContext('2d');
+      const W = c.width, H = c.height;
+
+      // Background
+      ctx.fillStyle = BG;
+      ctx.fillRect(0, 0, W, H);
+
+      // Pixel dotted grid
+      const cols = 10, rows = 5;
+      ctx.fillStyle = GRID_DOT;
+      for (let i = 0; i <= cols; i++) {
+        const x = Math.round(i * W / cols);
+        for (let y = 0; y < H; y += PX * 3) {
+          ctx.fillRect(x - 1, y, 1, PX);
+        }
+      }
+      for (let j = 0; j <= rows; j++) {
+        const y = Math.round(j * H / rows);
+        for (let x = 0; x < W; x += PX * 3) {
+          ctx.fillRect(x, y - 1, PX, 1);
+        }
+      }
+
+      // Center cross highlight
+      ctx.fillStyle = GRID_CTR;
+      ctx.fillRect(0, H / 2 - 1, W, 1);
+      ctx.fillRect(W / 2 - 1, 0, 1, H);
+
+      // Axis labels
+      ctx.fillStyle = GRID_AXIS;
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillText('+1', W / 2 + 4, 10);
+      ctx.fillText('-1', W / 2 + 4, H - 4);
+      ctx.fillText('0', W / 2 + 4, H / 2 - 3);
+      ctx.fillText('t →', W - 30, H - 4);
+
+      // Time labels per column
+      for (let i = 1; i < cols; i++) {
+        const x = Math.round(i * W / cols);
+        ctx.fillText(i * 10, x - 6, H - 4);
+      }
+
+      if (!dataArray) return;
+
+      const gain = parseFloat(document.getElementById('gain').value);
+      const len = dataArray.length;
+      const sliceW = W / len;
+
+      // Glow pass (thick, dim)
+      ctx.strokeStyle = WAVE_GLO;
+      ctx.lineWidth = PX * 3;
+      ctx.beginPath();
+      for (let i = 0; i < len; i++) {
+        const v = (dataArray[i] - 128) * gain;
+        const y = H / 2 + v * (H / 260);
+        if (i === 0) ctx.moveTo(i * sliceW, y);
+        else ctx.lineTo(i * sliceW, y);
+      }
+      ctx.stroke();
+
+      // Main pixel wave — draw as pixel-blocks for MC feel
+      for (let i = 0; i < len; i += PX) {
+        const v = (dataArray[i] - 128) * gain;
+        const vp = (dataArray[Math.max(0, i - PX)] - 128) * gain;
+        const y = H / 2 + v * (H / 260);
+        const yp = H / 2 + vp * (H / 260);
+        const x = Math.round(i * sliceW);
+        const bw = Math.max(PX, Math.round(PX * sliceW));
+
+        // Vertical pixel line between samples
+        const yMin = Math.round(Math.min(y, yp));
+        const yMax = Math.round(Math.max(y, yp));
+        for (let py = yMin; py <= yMax; py += PX) {
+          const frac = Math.abs(v) / 128;
+          ctx.fillStyle = frac > 0.7 ? WAVE_HI : frac > 0.35 ? WAVE_MID : '#1144aa';
+          ctx.fillRect(x, py, bw, PX);
+        }
+      }
+    }
+
+    // ── FFT SPECTRUM ──
+    function drawFFT() {
+      const c = document.getElementById('fftCanvas');
+      const ctx = c.getContext('2d');
+      const W = c.width, H = c.height;
+
+      ctx.fillStyle = BG;
+      ctx.fillRect(0, 0, W, H);
+
+      // Horizontal grid lines
+      const hLines = 4;
+      for (let j = 0; j <= hLines; j++) {
+        const y = Math.round(j * H / hLines);
+        ctx.fillStyle = GRID_DOT;
+        for (let x = 0; x < W; x += PX * 3) ctx.fillRect(x, y, PX, 1);
+        const db = Math.round(-j * (96 / hLines));
+        ctx.fillStyle = GRID_AXIS;
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillText(db + 'dB', 2, y + 6);
+      }
+
+      // Frequency labels at bottom
+      if (audioCtx) {
+        const nyq = audioCtx.sampleRate / 2;
+        const ticks = [100, 500, 1000, 2000, 4000, 8000];
+        ctx.fillStyle = GRID_AXIS;
+        ctx.font = '5px "Press Start 2P"';
+        for (const f of ticks) {
+          const x = Math.round((f / nyq) * W);
+          if (x > 0 && x < W - 20) {
+            for (let y = 0; y < H; y += PX * 3) ctx.fillRect(x, y, 1, PX);
+            ctx.fillText(f >= 1000 ? (f / 1000) + 'k' : f, x + 2, H - 4);
+          }
+        }
+      }
+
+      if (!fftArray) return;
+
+      const len = fftArray.length;
+      const barW = Math.max(PX, Math.ceil(W / len * 4));
+
+      // Find dominant frequency for HUD
+      let maxBin = 0, maxVal = 0;
+      for (let i = 2; i < len; i++) if (fftArray[i] > maxVal) { maxVal = fftArray[i]; maxBin = i; }
+
+      // Bars — pixelated blocks
+      for (let i = 0; i < len; i += 4) {
+        const mag = fftArray[i] / 255;
+        if (mag < 0.01) continue;
+        const barH = Math.round(mag * (H - 12));
+        const x = Math.round(i / len * W);
+        const y = H - barH;
+
+        // Color by magnitude
+        if (mag > 0.75) ctx.fillStyle = FFT_PEAK;
+        else if (mag > 0.5) ctx.fillStyle = FFT_HI;
+        else if (mag > 0.25) ctx.fillStyle = FFT_MID;
+        else ctx.fillStyle = FFT_LOW;
+
+        // Draw in pixel blocks
+        for (let py = y; py < H; py += PX) {
+          ctx.fillRect(x, py, barW - 1, PX);
+        }
+
+        // Reflection (dim, below the bar, inverted)
+        ctx.fillStyle = (mag > 0.5 ? '#0d3a7a44' : '#07192e44');
+        for (let py = H; py < H + barH * 0.18; py += PX) {
+          ctx.fillRect(x, py, barW - 1, PX);
+        }
+      }
+
+      // Peak dot on tallest bar
+      if (maxVal > 30) {
+        const px = Math.round(maxBin / len * W);
+        const ph = Math.round((maxVal / 255) * (H - 12));
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px, H - ph - PX, barW, PX);
+      }
+    }
+
+    // ── CONTROLS ──
+    function toggleHold() {
+      freeze = !freeze;
+      const btn = document.getElementById('holdBtn');
+      btn.textContent = freeze ? '▶ RESUME' : '⏸ HOLD';
+      btn.classList.toggle('active', freeze);
+    }
+
+    function toggleOsc() {
+      if (!audioCtx) { alert('Click START first'); return; }
+      const btn = document.getElementById('oscBtn');
+      if (!oscOn) {
+        osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 440;
+        osc.connect(splitter);
+        osc.start();
+        oscOn = true;
+        btn.textContent = '■ TONE OFF';
+        btn.classList.add('tone-on');
+      } else {
+        osc.stop(); osc.disconnect();
+        oscOn = false;
+        btn.textContent = '♪ TONE GEN';
+        btn.classList.remove('tone-on');
+      }
+    }
+
+    function changeWave() { }
+
+    document.getElementById('gain').oninput = e => {
+      if (splitter) splitter.gain.value = parseFloat(e.target.value);
+      document.getElementById('gainVal').textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+    };
+
+    // ── HUD UPDATE ──
+    function hudLoop() {
+      setInterval(() => {
+        if (!analyser) return;
+
+        // Peak dB
+        const maxSample = fftArray ? Math.max(...fftArray) : 0;
+        const db = maxSample > 0 ? (20 * Math.log10(maxSample / 255)).toFixed(1) : '--';
+        document.getElementById('peakVal').textContent = db + ' dB';
+        document.getElementById('state').textContent = freeze ? 'HOLD' : 'LIVE';
+
+        // Dominant freq
+        if (fftArray && audioCtx) {
+          let mx = 0, mxBin = 0;
+          for (let i = 2; i < fftArray.length; i++) if (fftArray[i] > mx) { mx = fftArray[i]; mxBin = i; }
+          const freq = Math.round(mxBin * audioCtx.sampleRate / (analyser.fftSize));
+          document.getElementById('domFreq').textContent = freq > 0 ? freq + ' Hz' : '-- Hz';
+        }
+      }, 200);
+    }
+  </script>
+
+</body>
+
+</html>
